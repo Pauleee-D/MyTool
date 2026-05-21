@@ -17,8 +17,7 @@ export default function LoginPage() {
     setError("");
     const res = await signIn("credentials", { password, redirect: false });
     if (res?.ok) {
-      router.push("/");
-      router.refresh();
+      window.location.href = "/";
     } else {
       setError("Incorrect password");
       setLoading(false);
