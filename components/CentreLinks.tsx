@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Globe, BookOpen, ArrowUpRight, Pencil, X, Check } from "lucide-react";
 
 interface Props {
@@ -58,6 +58,14 @@ export default function CentreLinks({ centreId, websiteUrl, knowledgeUrl, isAdmi
   const [editingKnowledge, setEditingKnowledge] = useState(false);
   const [localWebsite, setLocalWebsite] = useState(websiteUrl);
   const [localKnowledge, setLocalKnowledge] = useState(knowledgeUrl);
+
+  useEffect(() => {
+    if (!editingWebsite) setLocalWebsite(websiteUrl);
+  }, [websiteUrl, editingWebsite]);
+
+  useEffect(() => {
+    if (!editingKnowledge) setLocalKnowledge(knowledgeUrl);
+  }, [knowledgeUrl, editingKnowledge]);
 
   const save = async (newWebsite: string, newKnowledge: string) => {
     setLocalWebsite(newWebsite);
