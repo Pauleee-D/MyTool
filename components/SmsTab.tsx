@@ -95,9 +95,9 @@ export default function SmsTab({ centreId, options, isAdmin, onSaved }: Props) {
               <div key={i}>
                 <button
                   onClick={() => handleCopy(i)}
-                  className={`flex items-center gap-1.5 mb-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${copied === i ? "text-emerald-600" : "text-gray-500 hover:text-indigo-600"}`}
+                  className={`mb-1.5 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors ${copied === i ? "bg-emerald-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}
                 >
-                  {copied === i ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied === i ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {copied === i ? "Copied!" : opt.label}
                 </button>
                 <textarea value={opt.text} readOnly rows={8} className="w-full border border-gray-200 rounded-xl p-3 text-sm bg-gray-50 text-gray-700 cursor-default resize-none" />
