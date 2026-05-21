@@ -95,6 +95,8 @@ export default function SmsTab({ centreId, options, isAdmin, onSaved }: Props) {
               const pair = Math.floor(i / 2);
               const baseColor = pair === 1
                 ? "bg-sky-500 hover:bg-sky-600"
+                : pair === 2
+                ? "bg-orange-400 hover:bg-orange-500"
                 : pair === 3
                 ? "bg-green-500 hover:bg-green-600"
                 : "bg-indigo-600 hover:bg-indigo-700";
