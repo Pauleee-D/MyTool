@@ -91,18 +91,26 @@ export default function SmsTab({ centreId, options, isAdmin, onSaved }: Props) {
               gridAutoColumns: "1fr",
             }}
           >
-            {options.map((opt, i) => (
-              <div key={i}>
-                <button
-                  onClick={() => handleCopy(i)}
-                  className={`mb-1.5 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors ${copied === i ? "bg-emerald-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}
-                >
-                  {copied === i ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied === i ? "Copied!" : opt.label}
-                </button>
-                <textarea value={opt.text} readOnly rows={8} className="w-full border border-gray-200 rounded-xl p-3 text-sm bg-gray-50 text-gray-700 cursor-default resize-none" />
-              </div>
-            ))}
+            {options.map((opt, i) => {
+              const pair = Math.floor(i / 2);
+              const baseColor = pair === 1
+                ? "bg-sky-500 hover:bg-sky-600"
+                : pair === 3
+                ? "bg-green-500 hover:bg-green-600"
+                : "bg-indigo-600 hover:bg-indigo-700";
+              return (
+                <div key={i}>
+                  <button
+                    onClick={() => handleCopy(i)}
+                    className={`mb-1.5 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors text-white ${copied === i ? "bg-emerald-600" : baseColor}`}
+                  >
+                    {copied === i ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied === i ? "Copied!" : opt.label}
+                  </button>
+                  <textarea value={opt.text} readOnly rows={8} className="w-full border border-gray-200 rounded-xl p-3 text-sm bg-gray-50 text-gray-700 cursor-default resize-none" />
+                </div>
+              );
+            })}
           </div>
         )
       )}
