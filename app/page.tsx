@@ -3,9 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Building2, MapPin, Search, X, LogIn, LogOut, ChevronDown, Mail, MessageSquare, ArrowLeftRight, ArrowUpRight, Eye, EyeOff, Sun, Moon } from "lucide-react";
-import { centres, states } from "@/data/centres-list";
-import type { Centre } from "@/data/centres-list";
+import { Building2, MapPin, Search, X, LogIn, LogOut, ChevronDown, Mail, MessageSquare, ArrowLeftRight, ArrowUpRight, Eye, EyeOff, Sun, Moon, Plus, Pencil, Trash2 } from "lucide-react";
 import EmailTab from "@/components/EmailTab";
 import SmsTab from "@/components/SmsTab";
 import type { SmsOption } from "@/components/SmsTab";
@@ -13,8 +11,10 @@ import VenueTab from "@/components/VenueTab";
 import Modal from "@/components/Modal";
 import InfoSection from "@/components/InfoSection";
 import CentreLinks from "@/components/CentreLinks";
+import AddCentreModal from "@/components/AddCentreModal";
 
 type Modal = "email" | "sms" | "venue" | "knowledge" | null;
+type Centre = { id: string; name: string; state: string; url?: string };
 
 export default function Home() {
   const { data: session } = useSession();
@@ -24,6 +24,9 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [selectedState, setSelectedState] = useState("");
   const [selectedCentre, setSelectedCentre] = useState<Centre | null>(null);
+  const [centres, setCentres] = useState<Centre[]>([]);
+  const [showAddCentre, setShowAddCentre] = useState(false);
+  const [editingCentre, setEditingCentre] = useState<Centre | null>(null);
   const [openModal, setOpenModal] = useState<Modal>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -38,6 +41,7 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
+    fetch("/api/centres").then((r) => r.json()).then(setCentres);
     fetch("/api/templates").then((r) => r.json()).then(setEmailTemplates);
     fetch("/api/sms-templates").then((r) => r.json()).then(setSmsTemplates);
     fetch("/api/venue-numbers").then((r) => r.json()).then(setVenueNumbers);
@@ -45,6 +49,15 @@ export default function Home() {
     fetch("/api/opening-hours").then((r) => r.json()).then(setOpeningHours);
     fetch("/api/centre-links").then((r) => r.json()).then(setCentreLinks);
   }, []);
+
+  const states = [...new Set(centres.map((c) => c.state))].sort();
+
+  const handleDeleteCentre = async (id: string) => {
+    if (!confirm("Delete this centre? This cannot be undone.")) return;
+    await fetch("/api/centres", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    setCentres((p) => p.filter((c) => c.id !== id));
+    if (selectedCentre?.id === id) handleClear();
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -123,6 +136,14 @@ export default function Home() {
               >
                 {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowAddCentre(true)}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Add Centre
+                </button>
+              )}
               {isAdmin ? (
                 <button
                   onClick={() => signOut()}
@@ -185,14 +206,25 @@ export default function Home() {
                   {dropdownOpen && filteredCentres.length > 0 && (
                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto animate-slideUp">
                       {filteredCentres.map((c) => (
-                        <button
-                          key={c.id}
-                          onMouseDown={(e) => { e.preventDefault(); handleSelectCentre(c); }}
-                          className={`w-full px-4 py-2.5 text-left text-sm hover:bg-indigo-50 transition-colors flex items-center justify-between ${selectedCentre?.id === c.id ? "bg-indigo-50 text-indigo-700 font-medium" : "text-gray-700"}`}
-                        >
-                          <span>{c.name}</span>
-                          <span className="text-xs text-gray-400 ml-2 shrink-0">{c.state}</span>
-                        </button>
+                        <div key={c.id} className="flex items-center hover:bg-indigo-50 transition-colors">
+                          <button
+                            onMouseDown={(e) => { e.preventDefault(); handleSelectCentre(c); }}
+                            className={`flex-1 px-4 py-2.5 text-left text-sm flex items-center justify-between ${selectedCentre?.id === c.id ? "bg-indigo-50 text-indigo-700 font-medium" : "text-gray-700"}`}
+                          >
+                            <span>{c.name}</span>
+                            <span className="text-xs text-gray-400 ml-2 shrink-0">{c.state}</span>
+                          </button>
+                          {isAdmin && (
+                            <div className="flex items-center gap-1 pr-2">
+                              <button onMouseDown={(e) => { e.preventDefault(); setEditingCentre(c); setDropdownOpen(false); }} className="p-1 hover:bg-gray-200 rounded transition-colors" title="Edit centre">
+                                <Pencil className="w-3.5 h-3.5 text-gray-400" />
+                              </button>
+                              <button onMouseDown={(e) => { e.preventDefault(); handleDeleteCentre(c.id); }} className="p-1 hover:bg-red-100 rounded transition-colors" title="Delete centre">
+                                <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -239,24 +271,22 @@ export default function Home() {
           <section className="animate-slideUp">
             {/* Centre header card */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-5">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/25 shrink-0">
                   <Building2 className="w-6 h-6 text-white" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-bold text-gray-900 truncate">{selectedCentre.name}</h2>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 break-words">{selectedCentre.name}</h2>
                   <p className="text-sm text-gray-400 mt-0.5">{selectedCentre.state}</p>
                 </div>
-                <div style={{ flex: "2 1 0%" }}>
-                  <CentreLinks
-                    centreId={selectedCentre.id}
-                    websiteUrl={centreWebsiteUrl}
-                    knowledgeUrl={centreKnowledgeUrl}
-                    isAdmin={isAdmin}
-                    onSaved={(website, knowledge) => setCentreLinks((p) => ({ ...p, [selectedCentre.id]: { website_url: website, knowledge_url: knowledge } }))}
-                  />
-                </div>
               </div>
+              <CentreLinks
+                centreId={selectedCentre.id}
+                websiteUrl={centreWebsiteUrl}
+                knowledgeUrl={centreKnowledgeUrl}
+                isAdmin={isAdmin}
+                onSaved={(website, knowledge) => setCentreLinks((p) => ({ ...p, [selectedCentre.id]: { website_url: website, knowledge_url: knowledge } }))}
+              />
             </div>
 
             {/* Tool cards */}
@@ -387,6 +417,24 @@ export default function Home() {
           </>
         )}
       </main>
+
+      {showAddCentre && (
+        <AddCentreModal
+          onSaved={(c) => { setCentres((p) => [...p, c].sort((a, b) => a.name.localeCompare(b.name))); setShowAddCentre(false); }}
+          onClose={() => setShowAddCentre(false)}
+        />
+      )}
+      {editingCentre && (
+        <AddCentreModal
+          existing={editingCentre}
+          onSaved={(c) => {
+            setCentres((p) => p.map((x) => x.id === c.id ? c : x).sort((a, b) => a.name.localeCompare(b.name)));
+            if (selectedCentre?.id === c.id) setSelectedCentre(c);
+            setEditingCentre(null);
+          }}
+          onClose={() => setEditingCentre(null)}
+        />
+      )}
     </div>
     </div>
   );

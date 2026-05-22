@@ -104,8 +104,7 @@ interface InfoSectionProps {
 
 export default function InfoSection({ centreId, openingHours, generalInfo, isAdmin, onHoursSaved, onInfoSaved }: InfoSectionProps) {
   return (
-    <div className="grid grid-cols-3 gap-4 mt-4">
-      {/* Opening Hours — 1 column (same width as Email card) */}
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
       <div className="col-span-1">
         <EditablePanel
           centreId={centreId}
@@ -120,8 +119,7 @@ export default function InfoSection({ centreId, openingHours, generalInfo, isAdm
         />
       </div>
 
-      {/* General Information — 2 columns (same width as SMS + Venue Transfer combined) */}
-      <div className="col-span-2">
+      <div className="col-span-1 sm:col-span-2">
         <EditablePanel
           centreId={centreId}
           content={generalInfo}
