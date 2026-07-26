@@ -20,8 +20,7 @@ export async function POST(req: NextRequest) {
   if (!id || typeof content !== "string") return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
   const supabase = getSupabase();
-  await supabase.from("knowledge_library").delete().eq("centre_id", id);
-  const { error } = await supabase.from("knowledge_library").insert({ centre_id: id, content });
+  const { error } = await supabase.from("knowledge_library").upsert({ centre_id: id, content }, { onConflict: "centre_id" });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

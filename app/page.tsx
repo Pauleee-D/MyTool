@@ -1,20 +1,86 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Building2, MapPin, Search, X, LogIn, LogOut, ChevronDown, Mail, MessageSquare, ArrowLeftRight, ArrowUpRight, Eye, EyeOff, Sun, Moon, Plus, Pencil, Trash2 } from "lucide-react";
+import { Building2, MapPin, Search, X, LogIn, LogOut, ChevronDown, Mail, MessageSquare, ArrowLeftRight, ArrowUpRight, Eye, EyeOff, Sun, Moon, Plus, Pencil, Trash2, Bot, Check } from "lucide-react";
 import EmailTab from "@/components/EmailTab";
-import SmsTab from "@/components/SmsTab";
-import type { SmsOption } from "@/components/SmsTab";
-import VenueTab from "@/components/VenueTab";
 import Modal from "@/components/Modal";
 import InfoSection from "@/components/InfoSection";
 import CentreLinks from "@/components/CentreLinks";
+import VPAssistant from "@/components/VPAssistant";
 import AddCentreModal from "@/components/AddCentreModal";
 
-type Modal = "email" | "sms" | "venue" | "knowledge" | null;
+type ModalType = "email" | null;
 type Centre = { id: string; name: string; state: string; url?: string };
+type CentreLinkData = { website_url?: string; knowledge_url?: string; sms_url?: string; transfer_url?: string };
+
+function LinkToolCard({
+  label, url, icon, hoverColor, accentColor, isAdmin, onSaveUrl,
+}: {
+  label: string; url: string; icon: React.ReactNode;
+  hoverColor: string; accentColor: string;
+  isAdmin: boolean; onSaveUrl: (val: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(url);
+  useEffect(() => { setText(url); }, [url]);
+
+  const card = (
+    <div className="flex items-center gap-3">
+      <div className={`w-8 h-8 ${hoverColor} rounded-lg flex items-center justify-center transition-colors shrink-0`}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <h3 className="text-sm font-semibold text-gray-900">{label}</h3>
+        <p className="text-xs text-gray-400">{url ? "Open link" : "No link set"}</p>
+      </div>
+      <ArrowUpRight className={`w-4 h-4 ${url ? accentColor : "text-gray-200"} transition-colors shrink-0`} />
+    </div>
+  );
+
+  return (
+    <div className="relative tool-card group bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3">
+      {url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="block focus:outline-none">
+          {card}
+        </a>
+      ) : (
+        <div className="opacity-60">{card}</div>
+      )}
+      {isAdmin && !editing && (
+        <button
+          onClick={() => setEditing(true)}
+          className="absolute top-2 right-2 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all"
+          title={`Edit ${label} URL`}
+        >
+          <Pencil className="w-3 h-3 text-gray-400" />
+        </button>
+      )}
+      {editing && (
+        <div className="absolute inset-0 bg-white rounded-2xl border border-indigo-200 shadow-lg z-10 p-3 flex flex-col gap-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label} URL</p>
+          <input
+            type="url"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            autoFocus
+            placeholder="https://…"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+          />
+          <div className="flex gap-2">
+            <button onClick={() => { setEditing(false); setText(url); }} className="flex-1 flex items-center justify-center gap-1 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-medium transition-colors">
+              <X className="w-3 h-3" /> Cancel
+            </button>
+            <button onClick={() => { onSaveUrl(text); setEditing(false); }} className="flex-1 flex items-center justify-center gap-1 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors">
+              <Check className="w-3 h-3" /> Save
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Home() {
   const { data: session } = useSession();
@@ -27,27 +93,25 @@ export default function Home() {
   const [centres, setCentres] = useState<Centre[]>([]);
   const [showAddCentre, setShowAddCentre] = useState(false);
   const [editingCentre, setEditingCentre] = useState<Centre | null>(null);
-  const [openModal, setOpenModal] = useState<Modal>(null);
+  const [openModal, setOpenModal] = useState<ModalType>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [emailTemplates, setEmailTemplates] = useState<Record<string, string>>({});
-  const [smsTemplates, setSmsTemplates] = useState<Record<string, SmsOption[]>>({});
-  const [venueNumbers, setVenueNumbers] = useState<Record<string, string>>({});
   const [generalInfo, setGeneralInfo] = useState<Record<string, string>>({});
   const [openingHours, setOpeningHours] = useState<Record<string, string>>({});
-  const [centreLinks, setCentreLinks] = useState<Record<string, { website_url?: string; knowledge_url?: string }>>({});
-  const [showInfo, setShowInfo] = useState(true);
+  const [centreLinks, setCentreLinks] = useState<Record<string, CentreLinkData>>({});
+  const [knowledgeLibrary, setKnowledgeLibrary] = useState<Record<string, string>>({});
+  const [showInfo, setShowInfo] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     fetch("/api/centres").then((r) => r.json()).then(setCentres);
     fetch("/api/templates").then((r) => r.json()).then(setEmailTemplates);
-    fetch("/api/sms-templates").then((r) => r.json()).then(setSmsTemplates);
-    fetch("/api/venue-numbers").then((r) => r.json()).then(setVenueNumbers);
     fetch("/api/general-info").then((r) => r.json()).then(setGeneralInfo);
     fetch("/api/opening-hours").then((r) => r.json()).then(setOpeningHours);
     fetch("/api/centre-links").then((r) => r.json()).then(setCentreLinks);
+    fetch("/api/knowledge-library").then((r) => r.json()).then(setKnowledgeLibrary);
   }, []);
 
   const states = [...new Set(centres.map((c) => c.state))].sort();
@@ -59,7 +123,6 @@ export default function Home() {
     if (selectedCentre?.id === id) handleClear();
   };
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -94,14 +157,27 @@ export default function Home() {
     setDropdownOpen(false);
   };
 
+  const saveCardUrl = async (field: "sms" | "transfer", url: string) => {
+    if (!selectedCentre) return;
+    const current = centreLinks[selectedCentre.id] ?? {};
+    const updated: CentreLinkData = { ...current, [`${field}_url`]: url };
+    setCentreLinks((p) => ({ ...p, [selectedCentre.id]: updated }));
+    await fetch("/api/centre-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: selectedCentre.id, website_url: updated.website_url, knowledge_url: updated.knowledge_url, sms_url: updated.sms_url, transfer_url: updated.transfer_url }),
+    });
+  };
+
   const centreEmail = selectedCentre ? (emailTemplates[selectedCentre.id] ?? "") : "";
-  const centreSms = selectedCentre ? (smsTemplates[selectedCentre.id] ?? []) : [];
-  const centreVenue = selectedCentre ? (venueNumbers[selectedCentre.id] ?? "") : "";
   const centreInfo = selectedCentre ? (generalInfo[selectedCentre.id] ?? "") : "";
   const centreHours = selectedCentre ? (openingHours[selectedCentre.id] ?? "") : "";
   const centreLinks_data = selectedCentre ? (centreLinks[selectedCentre.id] ?? {}) : {};
   const centreWebsiteUrl = centreLinks_data.website_url ?? (selectedCentre?.url ?? "");
   const centreKnowledgeUrl = centreLinks_data.knowledge_url ?? "";
+  const centreSmsUrl = centreLinks_data.sms_url ?? "";
+  const centreTransferUrl = centreLinks_data.transfer_url ?? "";
+  const centreKnowledge = selectedCentre ? (knowledgeLibrary[selectedCentre.id] ?? "") : "";
 
   return (
     <div className={darkMode ? "dark" : ""}>
@@ -200,7 +276,13 @@ export default function Home() {
                     placeholder="Type to search centres…"
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all pr-10"
                   />
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={() => setDropdownOpen((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-indigo-400 hover:text-indigo-600 transition-colors"
+                  >
+                    <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
 
                   {/* Dropdown list */}
                   {dropdownOpen && filteredCentres.length > 0 && (
@@ -270,23 +352,25 @@ export default function Home() {
         {selectedCentre && (
           <section className="animate-slideUp">
             {/* Centre header card */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-5">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/25 shrink-0">
-                  <Building2 className="w-6 h-6 text-white" />
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-3 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/25 shrink-0">
+                  <Building2 className="w-4 h-4 text-white" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 break-words">{selectedCentre.name}</h2>
-                  <p className="text-sm text-gray-400 mt-0.5">{selectedCentre.state}</p>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-gray-900 truncate">{selectedCentre.name}</h2>
+                  <p className="text-xs text-gray-400">{selectedCentre.state}</p>
+                </div>
+                <div className="ml-auto shrink-0">
+                  <CentreLinks
+                    centreId={selectedCentre.id}
+                    websiteUrl={centreWebsiteUrl}
+                    knowledgeUrl={centreKnowledgeUrl}
+                    isAdmin={isAdmin}
+                    onSaved={(website, knowledge) => setCentreLinks((p) => ({ ...p, [selectedCentre.id]: { ...p[selectedCentre.id], website_url: website, knowledge_url: knowledge } }))}
+                  />
                 </div>
               </div>
-              <CentreLinks
-                centreId={selectedCentre.id}
-                websiteUrl={centreWebsiteUrl}
-                knowledgeUrl={centreKnowledgeUrl}
-                isAdmin={isAdmin}
-                onSaved={(website, knowledge) => setCentreLinks((p) => ({ ...p, [selectedCentre.id]: { website_url: website, knowledge_url: knowledge } }))}
-              />
             </div>
 
             {/* Tool cards */}
@@ -294,51 +378,65 @@ export default function Home() {
               {/* Email */}
               <button
                 onClick={() => setOpenModal("email")}
-                className="tool-card group bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                className="tool-card group bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center group-hover:bg-purple-100 transition-colors">
-                    <Mail className="w-6 h-6 text-purple-600" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors shrink-0">
+                    <Mail className="w-4 h-4 text-purple-600" />
                   </div>
-                  <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 transition-colors" />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900">Email Template</h3>
+                    <p className="text-xs text-gray-400">View &amp; copy</p>
+                  </div>
+                  <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 transition-colors shrink-0" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-900 mb-1">Email Template</h3>
-                <p className="text-xs text-gray-400">View &amp; copy email template</p>
               </button>
 
-              {/* SMS */}
-              <button
-                onClick={() => setOpenModal("sms")}
-                className="tool-card group bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
-                    <MessageSquare className="w-6 h-6 text-emerald-800" />
-                  </div>
-                  <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-emerald-700 transition-colors" />
-                </div>
-                <h3 className="text-base font-semibold text-gray-900 mb-1">SMS Templates</h3>
-                <p className="text-xs text-gray-400">View &amp; copy SMS options</p>
-              </button>
+              {/* SMS — link card */}
+              <LinkToolCard
+                label="SMS Templates"
+                url={centreSmsUrl}
+                icon={<MessageSquare className="w-4 h-4 text-emerald-800" />}
+                hoverColor="bg-emerald-50 group-hover:bg-emerald-100"
+                accentColor="text-gray-300 group-hover:text-emerald-700"
+                isAdmin={isAdmin}
+                onSaveUrl={(url) => saveCardUrl("sms", url)}
+              />
 
-              {/* Venue Transfer */}
-              <button
-                onClick={() => setOpenModal("venue")}
-                className="tool-card group bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-                    <ArrowLeftRight className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition-colors" />
+              {/* Venue Transfer — link card */}
+              <LinkToolCard
+                label="Venue Transfer"
+                url={centreTransferUrl}
+                icon={<ArrowLeftRight className="w-4 h-4 text-indigo-600" />}
+                hoverColor="bg-indigo-50 group-hover:bg-indigo-100"
+                accentColor="text-gray-300 group-hover:text-indigo-500"
+                isAdmin={isAdmin}
+                onSaveUrl={(url) => saveCardUrl("transfer", url)}
+              />
+            </div>
+
+            {/* VP Assistant — inline */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mt-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-violet-600" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-900 mb-1">Venue Transfer</h3>
-                <p className="text-xs text-gray-400">View &amp; copy transfer number</p>
-              </button>
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">VP Assistant</h3>
+                  <p className="text-xs text-gray-400">Ask VP anything about {selectedCentre.name}</p>
+                </div>
+              </div>
+              <VPAssistant
+                centreId={selectedCentre.id}
+                centreName={selectedCentre.name}
+                knowledgeBase={centreKnowledge}
+                isAdmin={isAdmin}
+                onKbSaved={(content: string) => setKnowledgeLibrary((p: Record<string, string>) => ({ ...p, [selectedCentre.id]: content }))}
+              />
             </div>
 
             {/* Opening Hours + General Information */}
-            <div className="flex justify-end mb-2">
+            <div className="flex justify-end mb-2 mt-4">
               <button
                 onClick={() => setShowInfo((v) => !v)}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-lg text-xs font-medium transition-colors"
@@ -360,61 +458,24 @@ export default function Home() {
           </section>
         )}
 
-        {/* Modals */}
+        {/* Email modal */}
         {selectedCentre && (
-          <>
-            <Modal
-              open={openModal === "email"}
-              onClose={() => setOpenModal(null)}
-              title="Email Template"
-              subtitle={selectedCentre.name}
-              icon={<Mail className="w-5 h-5 text-purple-600" />}
-              iconBg="bg-purple-50"
-              maxWidth="max-w-5xl"
-            >
-              <EmailTab
-                centreId={selectedCentre.id}
-                emailText={centreEmail}
-                isAdmin={isAdmin}
-                onSaved={(html) => setEmailTemplates((p) => ({ ...p, [selectedCentre.id]: html }))}
-              />
-            </Modal>
-
-            <Modal
-              open={openModal === "sms"}
-              onClose={() => setOpenModal(null)}
-              title="SMS Templates"
-              subtitle={selectedCentre.name}
-              icon={<MessageSquare className="w-5 h-5 text-emerald-800" />}
-              iconBg="bg-emerald-50"
-              maxWidth="max-w-5xl"
-            >
-              <SmsTab
-                centreId={selectedCentre.id}
-                options={centreSms}
-                isAdmin={isAdmin}
-                onSaved={(opts) => setSmsTemplates((p) => ({ ...p, [selectedCentre.id]: opts }))}
-              />
-            </Modal>
-
-            <Modal
-              open={openModal === "venue"}
-              onClose={() => setOpenModal(null)}
-              title="Venue Transfer Number"
-              subtitle={selectedCentre.name}
-              icon={<ArrowLeftRight className="w-5 h-5 text-indigo-600" />}
-              iconBg="bg-indigo-50"
-              maxWidth="max-w-md"
-            >
-              <VenueTab
-                centreId={selectedCentre.id}
-                number={centreVenue}
-                isAdmin={isAdmin}
-                onSaved={(num) => setVenueNumbers((p) => ({ ...p, [selectedCentre.id]: num }))}
-              />
-            </Modal>
-
-          </>
+          <Modal
+            open={openModal === "email"}
+            onClose={() => setOpenModal(null)}
+            title="Email Template"
+            subtitle={selectedCentre.name}
+            icon={<Mail className="w-5 h-5 text-purple-600" />}
+            iconBg="bg-purple-50"
+            maxWidth="max-w-5xl"
+          >
+            <EmailTab
+              centreId={selectedCentre.id}
+              emailText={centreEmail}
+              isAdmin={isAdmin}
+              onSaved={(html) => setEmailTemplates((p) => ({ ...p, [selectedCentre.id]: html }))}
+            />
+          </Modal>
         )}
       </main>
 
