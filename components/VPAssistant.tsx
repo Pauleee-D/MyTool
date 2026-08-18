@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Trash2, Bot, Pencil, X, Save } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   role: "user" | "assistant";
@@ -31,6 +33,7 @@ export default function VPAssistant({ centreId, centreName, knowledgeBase, isAdm
   }, [knowledgeBase]);
 
   useEffect(() => {
+    if (messages.length === 0) return;
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -180,7 +183,34 @@ export default function VPAssistant({ centreId, centreName, knowledgeBase, isAdm
               {m.role === "assistant" && (
                 <p className="text-[10px] font-semibold text-indigo-500 mb-1 uppercase tracking-wider">VP</p>
               )}
-              <p className="whitespace-pre-wrap">{m.content}</p>
+              {m.role === "assistant" ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({ ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                    strong: ({ ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
+                    ul: ({ ...props }) => <ul className="list-disc pl-5 mb-2 space-y-0.5 last:mb-0" {...props} />,
+                    ol: ({ ...props }) => <ol className="list-decimal pl-5 mb-2 space-y-0.5 last:mb-0" {...props} />,
+                    li: ({ ...props }) => <li {...props} />,
+                    h1: ({ ...props }) => <h3 className="text-sm font-bold text-gray-900 mt-1 mb-1 first:mt-0" {...props} />,
+                    h2: ({ ...props }) => <h3 className="text-sm font-bold text-gray-900 mt-1 mb-1 first:mt-0" {...props} />,
+                    h3: ({ ...props }) => <h4 className="text-sm font-semibold text-gray-900 mt-1 mb-1 first:mt-0" {...props} />,
+                    a: ({ ...props }) => <a className="text-indigo-600 underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                    code: ({ ...props }) => <code className="bg-gray-200 px-1 py-0.5 rounded text-xs" {...props} />,
+                    table: ({ ...props }) => (
+                      <div className="overflow-x-auto mb-2 last:mb-0">
+                        <table className="text-xs border-collapse" {...props} />
+                      </div>
+                    ),
+                    th: ({ ...props }) => <th className="border border-gray-300 px-2 py-1 bg-gray-50 text-left font-semibold" {...props} />,
+                    td: ({ ...props }) => <td className="border border-gray-300 px-2 py-1" {...props} />,
+                  }}
+                >
+                  {m.content}
+                </ReactMarkdown>
+              ) : (
+                <p className="whitespace-pre-wrap">{m.content}</p>
+              )}
             </div>
           </div>
         ))}

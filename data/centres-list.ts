@@ -48,7 +48,7 @@ export const centres: Centre[] = [
   { id: "ascotvale", name: "Ascot Vale", state: "VIC", url: "https://www.movemv.com.au/ascot-vale-leisure-centre/" },
   { id: "civicreserve", name: "Civic Reserve", state: "VIC", url: "https://www.civicreccentre.com.au/" },
   { id: "yarra", name: "Yarra Centre", state: "VIC", url: "https://www.yarracentre.com.au/" },
-  { id: "swanhill", name: "Swan Hill", state: "VIC", url: "https://www.swanhilllc.com.au/" },
+  { id: "swanhill", name: "Swan Hill", state: "VIC", url: "https://www.sharc.com.au/" },
   { id: "keiloreastleisurecentre", name: "Keilor East Leisure Centre", state: "VIC", url: "https://www.movemv.com.au/keilor-east-leisure-centre/" },
   { id: "somerville", name: "Somerville Rec Centre", state: "VIC", url: "https://www.somervillerecreationcentre.com.au/" },
   { id: "jackhort", name: "Jack Hort Memorial Pool", state: "VIC", url: "https://www.jackhortmcp.com.au/" },

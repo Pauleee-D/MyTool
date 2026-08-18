@@ -350,7 +350,7 @@ export default function Home() {
 
         {/* Centre details */}
         {selectedCentre && (
-          <section className="animate-slideUp">
+          <section>
             {/* Centre header card */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-3 mb-5">
               <div className="flex items-center gap-3">
