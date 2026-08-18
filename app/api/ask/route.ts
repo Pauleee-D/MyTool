@@ -13,7 +13,7 @@ ${knowledgeBase
   : "Answer as helpfully as possible based on your general knowledge about leisure centres."}`;
 
   const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-120b",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: question },
