@@ -63,8 +63,9 @@ export default function AddCentreModal({ existing, onSaved, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">State</label>
+            <label htmlFor="new-centre-state" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">State</label>
             <select
+              id="new-centre-state"
               value={state}
               onChange={(e) => setState(e.target.value)}
               className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"

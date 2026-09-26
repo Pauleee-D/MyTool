@@ -104,14 +104,29 @@ export default function Home() {
   const [knowledgeLibrary, setKnowledgeLibrary] = useState<Record<string, string>>({});
   const [showInfo, setShowInfo] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    fetch("/api/centres").then((r) => r.json()).then(setCentres);
-    fetch("/api/templates").then((r) => r.json()).then(setEmailTemplates);
-    fetch("/api/general-info").then((r) => r.json()).then(setGeneralInfo);
-    fetch("/api/opening-hours").then((r) => r.json()).then(setOpeningHours);
-    fetch("/api/centre-links").then((r) => r.json()).then(setCentreLinks);
-    fetch("/api/knowledge-library").then((r) => r.json()).then(setKnowledgeLibrary);
+    let cancelled = false;
+
+    const loadJson = <T,>(url: string, fallback: T) =>
+      fetch(url)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${url} returned ${r.status}`))))
+        .catch(() => {
+          if (!cancelled) setLoadError(true);
+          return fallback;
+        });
+
+    loadJson("/api/centres", []).then((data) => !cancelled && setCentres(data));
+    loadJson("/api/templates", {}).then((data) => !cancelled && setEmailTemplates(data));
+    loadJson("/api/general-info", {}).then((data) => !cancelled && setGeneralInfo(data));
+    loadJson("/api/opening-hours", {}).then((data) => !cancelled && setOpeningHours(data));
+    loadJson("/api/centre-links", {}).then((data) => !cancelled && setCentreLinks(data));
+    loadJson("/api/knowledge-library", {}).then((data) => !cancelled && setKnowledgeLibrary(data));
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const states = [...new Set(centres.map((c) => c.state))].sort();
@@ -242,14 +257,21 @@ export default function Home() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+        {loadError && (
+          <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm">
+            Couldn&apos;t load centre data, try again shortly.
+          </div>
+        )}
+
         {/* Centre Selector */}
         <section className="mb-8">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <div className="flex flex-col sm:flex-row gap-3">
               {/* State filter */}
               <div className="sm:w-40">
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">State</label>
+                <label htmlFor="state-filter" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">State</label>
                 <select
+                  id="state-filter"
                   value={selectedState}
                   onChange={(e) => { setSelectedState(e.target.value); setSearch(""); setSelectedCentre(null); }}
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer"
@@ -279,6 +301,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setDropdownOpen((v) => !v)}
+                    aria-label={dropdownOpen ? "Close centre list" : "Open centre list"}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-indigo-400 hover:text-indigo-600 transition-colors"
                   >
                     <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
